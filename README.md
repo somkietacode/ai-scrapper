@@ -1,6 +1,10 @@
 # AI Web Scraper
 
 A desktop application built with Electron and Gemini AI to extract structured data from websites.
+![image](https://github.com/user-attachments/assets/f7190915-c0e2-4500-9db9-51bf6d4c78d3)
+![image](https://github.com/user-attachments/assets/383ac229-f1c1-46d5-b4d8-714c11ae9d5b)
+![image](https://github.com/user-attachments/assets/e4464603-d1a5-4006-b3dc-dcc71a37bfc0)
+
 
 ## Features
 
