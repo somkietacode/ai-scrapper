@@ -20,8 +20,8 @@ A desktop application built with Electron and Gemini AI to extract structured da
 
 1. Clone this repository:
    ```powershell
-   git clone https://github.com/yourusername/gemmi-scrapper.git
-   cd gemmi-scrapper
+   git clone https://github.com/somkietacode/ai-scrapper.git
+   cd ai-scrapper
    ```
 
 2. Install dependencies:
