@@ -1,0 +1,21 @@
+{
+  "name": "ai-scrapper",
+  "version": "1.0.0",
+  "description": "Take your web scraping to the next level with AI",
+  "keywords": [
+    "ai",
+    "scrapping",
+    "web"
+  ],
+  "license": "MIT",
+  "author": "Ouedraogo Somkieta Rahim Alex",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^36.3.2"
+  }
+}

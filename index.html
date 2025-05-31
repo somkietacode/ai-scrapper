@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Scraper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                            600: '#475569',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .window-drag {
+            -webkit-app-region: drag;
+        }
+        
+        .window-no-drag {
+            -webkit-app-region: no-drag;
+        }
+        
+        .json-editor {
+            min-height: 150px;
+            font-family: 'Fira Code', monospace;
+            white-space: pre;
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            tab-size: 2;
+        }
+        
+        .result-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .result-table th {
+            background-color: #1e293b;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .result-table th, .result-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .result-table tr:hover td {
+            background-color: #1e293b;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #38bdf8;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        
+        .glow {
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+        }
+        
+        .input-field {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+        
+        .input-field:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Window controls -->
+    
+
+    <div class="container mx-auto px-6 py-6">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-primary-300 mb-2">AI Web Scraper</h1>
+            <p class="text-gray-400">Extract structured data from websites using the power of Gemini AI</p>
+        </header>
+
+        <div class="bg-dark-800 rounded-xl shadow-lg p-6 mb-8 border border-dark-700 glow">
+            <h2 class="text-xl font-semibold text-primary-300 mb-4 flex items-center">
+                <i class="fas fa-cog mr-2"></i> Configuration
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label for="api-key" class="block text-sm font-medium text-gray-300 mb-1">Gemini API Key</label>
+                    <div class="relative">
+                        <input type="password" id="api-key" class="w-full px-4 py-2 input-field rounded-lg focus:outline-none" placeholder="Enter your Gemini API key">
+                        <button id="toggle-api-key" class="absolute right-3 top-2.5 text-gray-400 hover:text-primary-300">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Your API key is used only in your browser and never stored.</p>
+                </div>
+                
+                <div>
+                    <label for="url-list" class="block text-sm font-medium text-gray-300 mb-1">Website URLs (one per line)</label>
+                    <textarea id="url-list" class="w-full px-4 py-2 input-field rounded-lg focus:outline-none" rows="3" placeholder="https://example.com&#10;https://another-site.com"></textarea>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="prompt-format" class="block text-sm font-medium text-gray-300 mb-1">
+                        <span>Extraction Prompt</span>
+                        <span class="ml-2 badge bg-primary-900 text-primary-300">AI Instructions</span>
+                    </label>
+                    <textarea id="prompt-format" class="w-full px-4 py-2 input-field rounded-lg focus:outline-none" rows="5" placeholder="Extract the following information from this webpage as JSON:
+- title: The page title
+- description: The meta description
+- main_content: The main article text"></textarea>
+                </div>
+                
+                <div>
+                    <label for="output-format" class="block text-sm font-medium text-gray-300 mb-1">
+                        <span>Output JSON Format</span>
+                        <span class="ml-2 badge bg-primary-900 text-primary-300">Schema</span>
+                    </label>
+                    <div id="output-format" class="json-editor custom-scrollbar" contenteditable="true">{
+  "title": "",
+  "description": "",
+  "main_content": ""
+}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <button id="scrape-button" class="px-8 py-3 gradient-bg text-white font-medium rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-900 transition-all transform hover:scale-[1.02] flex items-center">
+                <i class="fas fa-play mr-2"></i>
+                <span id="button-text">Start Scraping</span>
+                <span id="button-spinner" class="loading-spinner hidden ml-2"></span>
+            </button>
+        </div>
+
+        <div id="results-section" class="hidden bg-dark-800 rounded-xl shadow-lg p-6 border border-dark-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-primary-300 flex items-center">
+                    <i class="fas fa-table mr-2"></i> Results
+                </h2>
+                <div class="flex space-x-2">
+                    <button id="export-json" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-dark-800 transition-colors flex items-center">
+                        <i class="fas fa-file-export mr-2"></i>Export JSON
+                    </button>
+                    <button id="copy-results" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-800 transition-colors flex items-center">
+                        <i class="fas fa-copy mr-2"></i>Copy All
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto custom-scrollbar">
+                <table id="results-table" class="result-table w-full rounded-lg overflow-hidden">
+                    <thead>
+                        <tr>
+                            <th class="rounded-tl-lg">URL</th>
+                            <th>Status</th>
+                            <th class="rounded-tr-lg">Data</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body" class="bg-dark-700">
+                        <!-- Results will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="error-message" class="hidden fixed bottom-4 right-4 bg-red-900 border border-red-700 text-red-100 p-4 rounded-lg shadow-xl max-w-md" role="alert">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-red-300 mt-1 mr-3"></i>
+                </div>
+                <div>
+                    <p id="error-text" class="font-medium">Error message will appear here</p>
+                </div>
+                <button id="close-error" class="ml-4 text-red-300 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="success-message" class="hidden fixed bottom-4 right-4 bg-green-900 border border-green-700 text-green-100 p-4 rounded-lg shadow-xl max-w-md" role="alert">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-green-300 mt-1 mr-3"></i>
+                </div>
+                <div>
+                    <p id="success-text" class="font-medium">Success message will appear here</p>
+                </div>
+                <button id="close-success" class="ml-4 text-green-300 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Window controls (guarded)
+            const minimizeBtn = document.getElementById('minimize-btn');
+            const maximizeBtn = document.getElementById('maximize-btn');
+            const closeBtn = document.getElementById('close-btn');
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', () => window.electron?.ipcRenderer.send('minimize-window'));
+            }
+            if (maximizeBtn) {
+                maximizeBtn.addEventListener('click', () => window.electron?.ipcRenderer.send('maximize-window'));
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => window.electron?.ipcRenderer.send('close-window'));
+            }
+
+            // Toggle API key visibility
+            const toggleApiKey = document.getElementById('toggle-api-key');
+            const apiKeyInput = document.getElementById('api-key');
+            
+            toggleApiKey.addEventListener('click', function() {
+                if (apiKeyInput.type === 'password') {
+                    apiKeyInput.type = 'text';
+                    toggleApiKey.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                } else {
+                    apiKeyInput.type = 'password';
+                    toggleApiKey.innerHTML = '<i class="fas fa-eye"></i>';
+                }
+            });
+
+            // Format JSON in output editor
+            const outputFormat = document.getElementById('output-format');
+            
+            outputFormat.addEventListener('blur', function() {
+                try {
+                    const json = JSON.parse(outputFormat.textContent);
+                    outputFormat.textContent = JSON.stringify(json, null, 2);
+                } catch (e) {
+                    // Don't reformat if invalid JSON
+                }
+            });
+
+            // Message handling
+            const errorMessage = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const closeError = document.getElementById('close-error');
+            
+            const successMessage = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            const closeSuccess = document.getElementById('close-success');
+            
+            closeError.addEventListener('click', function() {
+                errorMessage.classList.add('hidden');
+            });
+            
+            closeSuccess.addEventListener('click', function() {
+                successMessage.classList.add('hidden');
+            });
+            
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.classList.remove('hidden');
+                setTimeout(() => {
+                    errorMessage.classList.add('hidden');
+                }, 5000);
+            }
+            
+            function showSuccess(message) {
+                successText.textContent = message;
+                successMessage.classList.remove('hidden');
+                setTimeout(() => {
+                    successMessage.classList.add('hidden');
+                }, 3000);
+            }
+
+            // Scrape button functionality
+            const scrapeButton = document.getElementById('scrape-button');
+            const buttonText = document.getElementById('button-text');
+            const buttonSpinner = document.getElementById('button-spinner');
+            const resultsSection = document.getElementById('results-section');
+            const resultsBody = document.getElementById('results-body');
+            const exportJson = document.getElementById('export-json');
+            const copyResults = document.getElementById('copy-results');
+            
+            let scrapedData = [];
+            
+            scrapeButton.addEventListener('click', async function() {
+                const apiKey = apiKeyInput.value.trim();
+                const urls = document.getElementById('url-list').value.trim();
+                const prompt = document.getElementById('prompt-format').value.trim();
+                let outputFormatJson;
+                
+                try {
+                    outputFormatJson = JSON.parse(outputFormat.textContent);
+                } catch (e) {
+                    showError('Invalid output JSON format');
+                    return;
+                }
+                
+                if (!apiKey) {
+                    showError('Please enter your Gemini API key');
+                    return;
+                }
+                
+                if (!urls) {
+                    showError('Please enter at least one URL to scrape');
+                    return;
+                }
+                
+                if (!prompt) {
+                    showError('Please enter an extraction prompt');
+                    return;
+                }
+                
+                // Start scraping
+                buttonText.textContent = 'Scraping...';
+                buttonSpinner.classList.remove('hidden');
+                scrapeButton.disabled = true;
+                resultsBody.innerHTML = '';
+                scrapedData = [];
+                
+                const urlList = urls.split('\n').filter(url => url.trim() !== '');
+                
+                try {
+                    for (const url of urlList) {
+                        const cleanUrl = url.trim();
+                        
+                        // Add row for this URL
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="max-w-xs truncate text-primary-300">${cleanUrl}</td>
+                            <td><span class="badge bg-yellow-900 text-yellow-300">Processing</span></td>
+                            <td><i class="fas fa-spinner fa-spin text-gray-400"></i></td>
+                        `;
+                        resultsBody.appendChild(row);
+                        
+                        try {
+                            // First fetch the webpage content (simplified - in real app you'd need a proxy)
+                            const response = await fetch(`${cleanUrl}`, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
+                                }
+                            });
+                            
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            
+                            const html = await response.text();
+                            
+                            // Now send to Gemini API
+                            const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    contents: [{
+                                        parts: [{
+                                            text: `${prompt}\n\nHere is the webpage content:\n${html.substring(0, 10000)}` // Limit to first 10k chars
+                                        }]
+                                    }]
+                                })
+                            });
+                            
+                            if (!geminiResponse.ok) {
+                                throw new Error(`Gemini API error! status: ${geminiResponse.status}`);
+                            }
+                            
+                            const geminiData = await geminiResponse.json();
+                            const extractedText = geminiData.candidates[0].content.parts[0].text;
+                            
+                            let parsedData;
+                            try {
+                                // Try to extract JSON from the response
+                                const jsonMatch = extractedText.match(/{[\s\S]*}/);
+                                if (jsonMatch) {
+                                    parsedData = JSON.parse(jsonMatch[0]);
+                                } else {
+                                    parsedData = { raw_response: extractedText };
+                                }
+                            } catch (e) {
+                                parsedData = { raw_response: extractedText, error: 'Could not parse JSON response' };
+                            }
+                            
+                            // Update row with success
+                            row.innerHTML = `
+                                <td class="max-w-xs truncate text-primary-300">${cleanUrl}</td>
+                                <td><span class="badge bg-green-900 text-green-300">Success</span></td>
+                                <td class="max-w-xs truncate text-gray-300">${Object.keys(parsedData).join(', ')}</td>
+                            `;
+                            
+                            // Store the full data
+                            scrapedData.push({
+                                url: cleanUrl,
+                                data: parsedData
+                            });
+                            
+                        } catch (error) {
+                            // Update row with error
+                            row.innerHTML = `
+                                <td class="max-w-xs truncate text-primary-300">${cleanUrl}</td>
+                                <td><span class="badge bg-red-900 text-red-300">Error</span></td>
+                                <td class="text-gray-300">${error.message}</td>
+                            `;
+                            
+                            scrapedData.push({
+                                url: cleanUrl,
+                                error: error.message
+                            });
+                        }
+                    }
+                    
+                    // Show results section
+                    resultsSection.classList.remove('hidden');
+                    showSuccess(`Successfully scraped ${urlList.length} URLs`);
+                    
+                } catch (error) {
+                    showError(`Scraping failed: ${error.message}`);
+                } finally {
+                    buttonText.textContent = 'Start Scraping';
+                    buttonSpinner.classList.add('hidden');
+                    scrapeButton.disabled = false;
+                }
+            });
+            
+            // Export JSON functionality
+            exportJson.addEventListener('click', function() {
+                if (scrapedData.length === 0) {
+                    showError('No data to export');
+                    return;
+                }
+                
+                const dataStr = JSON.stringify(scrapedData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `gemini-scraper-${new Date().toISOString().slice(0,10)}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                showSuccess('Data exported successfully');
+            });
+            
+            // Copy results functionality
+            copyResults.addEventListener('click', function() {
+                if (scrapedData.length === 0) {
+                    showError('No data to copy');
+                    return;
+                }
+                
+                const dataStr = JSON.stringify(scrapedData, null, 2);
+                navigator.clipboard.writeText(dataStr)
+                    .then(() => {
+                        showSuccess('Results copied to clipboard');
+                    })
+                    .catch(err => {
+                        showError('Failed to copy results');
+                        console.error('Could not copy text: ', err);
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
